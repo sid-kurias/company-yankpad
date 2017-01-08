@@ -36,24 +36,29 @@
 
 ;;; Code:
 
+(defun company-yankpad--name-or-key (arg fn)
+    "Return candidates that match the string entered.
+ARG is what the user has entered and expects a match for.
+FN is the function that will extract either name or key."
+  (delq nil
+	(mapcar
+	 (lambda (c) (let ((snip (split-string (car c)  yankpad-expand-separator )))
+		  (if (string-prefix-p arg (car snip) t)
+		      (funcall fn snip))))
+	 (yankpad-active-snippets))))
+
 (defun company-yankpad (command &optional arg &rest ignored)
+      "Company backend for yankpad."
   (interactive (list 'interactive))
   (case command
     (interactive (company-begin-backend 'company-yankpad))
     (prefix (company-grab-symbol))
-    (annotation
-     (car (delq nil
-		(mapcar
-		 (lambda (c) (let ((snippet (split-string (car c)  yankpad-expand-separator )))
-			  (if (string-prefix-p arg (car snippet) t)
-			      (mapconcat 'identity (cdr snippet) " "))))
-		 (yankpad-active-snippets)))))
-    (candidates
-     (delq nil (mapcar
-		(lambda (c) (let ((snippet (split-string (car c)  yankpad-expand-separator )))
-			 (if (string-prefix-p arg (car snippet) t)
-			     (car snippet) )))
-		(yankpad-active-snippets))))
+    (annotation (car (company-yankpad--name-or-key
+		      arg (lambda (snippet) (mapconcat 'identity (cdr snippet) " ")))))
+    (candidates (company-yankpad--name-or-key arg (lambda (snippet) (car snippet))))
     (post-completion (yankpad-expand))
     (duplicates t)))
+
 (provide 'company-yankpad)
+
+;;; company-yankpad.el ends here
