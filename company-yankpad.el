@@ -36,15 +36,24 @@
 
 ;;; Code:
 
-
 (defun company-yankpad (command &optional arg &rest ignored)
   (interactive (list 'interactive))
   (case command
     (interactive (company-begin-backend 'company-yankpad))
     (prefix (company-grab-symbol))
-    (candidates (delq nil (mapcar
-			   (lambda (c) (let ((snippet (substring (car c)  0 -1 )))
-				    (if (string-prefix-p arg snippet t) snippet )))
-			   (yankpad-active-snippets))))
+    (annotation
+     (car (delq nil
+		(mapcar
+		 (lambda (c) (let ((snippet (split-string (car c)  yankpad-expand-separator )))
+			  (if (string-prefix-p arg (car snippet) t)
+			      (mapconcat 'identity (cdr snippet) " "))))
+		 (yankpad-active-snippets)))))
+    (candidates
+     (delq nil (mapcar
+		(lambda (c) (let ((snippet (split-string (car c)  yankpad-expand-separator )))
+			 (if (string-prefix-p arg (car snippet) t)
+			     (car snippet) )))
+		(yankpad-active-snippets))))
     (post-completion (yankpad-expand))
     (duplicates t)))
+(provide 'company-yankpad)
