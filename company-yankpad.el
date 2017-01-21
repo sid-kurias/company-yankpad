@@ -37,26 +37,37 @@
 ;;; Code:
 
 (defun company-yankpad--name-or-key (arg fn)
-    "Return candidates that match the string entered.
+  "Return candidates that match the string entered.
 ARG is what the user has entered and expects a match for.
 FN is the function that will extract either name or key."
   (delq nil
 	(mapcar
-	 (lambda (c) (let ((snip (split-string (car c)  yankpad-expand-separator )))
+	 (lambda (c) (let ((snip (split-string (car c)  yankpad-expand-separator)))
 		  (if (string-prefix-p arg (car snip) t)
-		      (funcall fn snip))))
-	 (yankpad-active-snippets))))
+		      (progn
+			(if (string-match yankpad-expand-separator (car c))
+			    (set-text-properties 0 1 '(type keyword) (car snip))
+			  (set-text-properties 0 1 '(type name) (car snip)))
+			(funcall fn snip)))))
+	(yankpad-active-snippets))))
 
 (defun company-yankpad (command &optional arg &rest ignored)
-      "Company backend for yankpad."
+  "Company backend for yankpad."
   (interactive (list 'interactive))
   (case command
     (interactive (company-begin-backend 'company-yankpad))
     (prefix (company-grab-symbol))
     (annotation (car (company-yankpad--name-or-key
-		      arg (lambda (snippet) (mapconcat 'identity (cdr snippet) " ")))))
+		      arg
+		      (lambda (snippet) (mapconcat 'identity (cdr snippet) " ")))))
     (candidates (company-yankpad--name-or-key arg (lambda (snippet) (car snippet))))
-    (post-completion (yankpad-expand))
+    (post-completion (let ((type (get-text-property 0 'type arg)))
+     		       (if (equal type 'keyword)
+     		       	   (yankpad-expand)
+     			 (let ((word (word-at-point))
+    			       (bounds (bounds-of-thing-at-point 'word)))
+     			   (delete-region (car bounds) (cdr bounds))
+     			   (yankpad-insert-from-current-category arg)))))
     (duplicates t)))
 
 (provide 'company-yankpad)
