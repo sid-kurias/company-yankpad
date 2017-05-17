@@ -51,12 +51,21 @@ FN is the function that will extract either name or key."
 			(funcall fn snip)))))
 	(yankpad-active-snippets))))
 
+(defun company-yankpad--prefix (prefix)
+  "Check if PREFIX is part of an active snippet.
+If PREFIX is not part of an active snippet inform company mode to use another
+backend"
+  (car (delq nil (mapcar
+		  (lambda (c) (let ((snip (split-string (car c)  yankpad-expand-separator)))
+                       (if (string-prefix-p prefix (car snip) t) prefix)))
+		  (yankpad-active-snippets)))))
+
 (defun company-yankpad (command &optional arg &rest ignored)
   "Company backend for yankpad."
   (interactive (list 'interactive))
   (case command
     (interactive (company-begin-backend 'company-yankpad))
-    (prefix (company-grab-symbol))
+    (prefix (company-yankpad--prefix (company-grab-symbol)))
     (annotation (car (company-yankpad--name-or-key
 		      arg
 		      (lambda (snippet) (mapconcat 'identity (cdr snippet) " ")))))
